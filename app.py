@@ -30,6 +30,7 @@ app = Flask(__name__)
 connected = connecting = connection_failed = False
 ble_loop: asyncio.AbstractEventLoop | None = None
 controller: Controller | None = None
+_pad_address: str | None = None  # Add this line
 
 session_active = belt_running = False
 resume_speed_kmh = 2.0  # default if none yet
@@ -49,10 +50,38 @@ def inject_flags():
 
 # ── BLE helpers ─────────────────────────────────────────────────────────
 async def _connect_to_pad() -> bool:
-    global controller
-    dev = await BleakScanner.find_device_by_name("WalkingPad", timeout=5)
+    global controller, _pad_address
+    dev = None
+
+    # 1. If we have a known address, try to connect directly first.
+    if _pad_address:
+        print(f"[INFO] Attempting to connect to known address: {_pad_address}", flush=True)
+        try:
+            # Use a short timeout for direct connection attempts
+            dev = await BleakScanner.find_device_by_address(_pad_address, timeout=5)
+        except Exception as exc:
+            print(f"[WARN] Failed to find device by address: {exc}", flush=True)
+            dev = None
+
+    # 2. If direct connection failed or we have no address, scan by name.
     if not dev:
+        print("[INFO] Scanning for device by name 'WalkingPad'...", flush=True)
+        try:
+            dev = await BleakScanner.find_device_by_name("WalkingPad", timeout=10)
+        except Exception as exc:
+            print(f"[WARN] Failed to find device by name: {exc}", flush=True)
+            dev = None
+
+    # 3. If we found a device, connect and save its address.
+    if not dev:
+        print("[ERR] Could not find WalkingPad. Ensure it is on and in range.", flush=True)
+        _pad_address = None  # Clear address if connection fails
         return False
+
+    # Save the address for future connections
+    _pad_address = dev.address
+    print(f"[INFO] Device found! Address: {_pad_address}", flush=True)
+
     controller = Controller()
     await controller.run(dev.address)
     await controller.switch_mode(WalkingPad.MODE_MANUAL)
@@ -71,7 +100,7 @@ async def _connect_to_pad() -> bool:
             process_status_packet(dist, steps, speed)
             print(f"DBG(push) d={dist} s={steps} v={speed}", flush=True)
         except Exception as exc:
-            print("[WARN] status_cb:", exc, flush=True)("[WARN] status_cb:", exc, flush=True)
+            print("[WARN] status_cb:", exc, flush=True)
 
     controller.on_cur_status_received = _status_cb
 
@@ -261,10 +290,10 @@ def stats_json():
 
 
 # ── Kick off BLE thread & run Flask dev server ──────────────────────────
-_start_ble_thread()
+# _start_ble_thread() # <--- REMOVE OR COMMENT OUT THIS LINE
 
 if __name__ == "__main__":
-    # Function to open the browser
+    # Function to open the browser (from previous request)
     def open_browser():
         webbrowser.open_new("http://127.0.0.1:5000")
 
