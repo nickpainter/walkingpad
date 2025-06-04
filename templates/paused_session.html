@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="mb-4">
+    <h1 class="display-4">
+        <span id="speed">{{ "%.1f"|format(speed * 0.621371) }}</span>
+        <small class="fs-5 text-muted">mph</small>
+    </h1>
+    <div class="text-muted">Paused</div>
+  </div>
+  <div class="row justify-content-center mb-4">
+    <div class="col-auto mx-3">
+        <h5><span id="distance">{{ "%.2f"|format(distance * 0.621371) }}</span> miles</h5>
+      <div class="text-muted">Distance</div>
+    </div>
+    <div class="col-auto mx-3">
+      <h5><span id="steps">{{ steps }}</span></h5>
+      <div class="text-muted">Steps</div>
+    </div>
+    <div class="col-auto mx-3">
+      <h5><span id="calories">{{ "%.0f"|format(calories) }}</span></h5>
+      <div class="text-muted">Calories</div>
+    </div>
+  </div>
+  <p>
+    <a href="{{ url_for('resume_session') }}" class="btn btn-success btn-lg">Resume</a>
+  </p>
+  <!-- Stats update script (not much changes while paused, but included for consistency) -->
+  <script>
+    setInterval(function(){
+      fetch("{{ url_for('get_stats') }}")
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById("speed").innerText = data.speed.toFixed(1);
+          document.getElementById("distance").innerText = data.distance.toFixed(2);
+          document.getElementById("steps").innerText = data.steps;
+          document.getElementById("calories").innerText = data.calories.toFixed(0);
+        });
+    }, 1000);
+  </script>
+{% endblock %}

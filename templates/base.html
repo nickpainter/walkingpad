@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WalkingPad Controller</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap Icons (for placeholder icons) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  {% if connecting %}
+  <!-- Auto-refresh page every 3 seconds while connecting -->
+  <meta http-equiv="refresh" content="3">
+  {% endif %}
+  <style>
+    body { background-color: #f8f9fa; }
+  </style>
+</head>
+<body class="d-flex flex-column" style="min-height: 100vh;">
+  <!-- Navbar Header -->
+  <nav class="navbar navbar-dark bg-dark px-3">
+    <span class="navbar-brand">WalkingPad Controller</span>
+    <div class="ms-auto d-flex align-items-center">
+      <!-- Placeholder icons for settings and user -->
+      <a href="#" class="text-light me-3"><i class="bi bi-gear fs-4"></i></a>
+      <a href="#" class="text-light me-3"><i class="bi bi-person-circle fs-4"></i></a>
+      <!-- Connection status and reconnect button -->
+      {% if connected %}
+        <span class="text-success fw-bold">Connected</span>
+      {% else %}
+        {% if connecting %}
+          <span class="text-warning">Connecting...</span>
+        {% else %}
+          <span class="text-danger fw-bold me-2">Disconnected</span>
+          <a href="{{ url_for('manual_reconnect') }}" class="btn btn-outline-light btn-sm">Reconnect</a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="container text-center flex-fill d-flex flex-column justify-content-center">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- Bootstrap JS (for completeness, though not heavily used here) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
