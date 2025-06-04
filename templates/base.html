@@ -3,12 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <title>WalkingPad Controller</title>
-  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <!-- Bootstrap Icons (for placeholder icons) -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
   {% if connecting %}
-  <!-- Auto-refresh page every 3 seconds while connecting -->
   <meta http-equiv="refresh" content="3">
   {% endif %}
   <style>
@@ -16,14 +13,9 @@
   </style>
 </head>
 <body class="d-flex flex-column" style="min-height: 100vh;">
-  <!-- Navbar Header -->
   <nav class="navbar navbar-dark bg-dark px-3">
     <span class="navbar-brand">WalkingPad Controller</span>
     <div class="ms-auto d-flex align-items-center">
-      <!-- Placeholder icons for settings and user -->
-      <a href="#" class="text-light me-3"><i class="bi bi-gear fs-4"></i></a>
-      <a href="#" class="text-light me-3"><i class="bi bi-person-circle fs-4"></i></a>
-      <!-- Connection status and reconnect button -->
       {% if connected %}
         <span class="text-success fw-bold">Connected</span>
       {% else %}
@@ -34,15 +26,38 @@
           <a href="{{ url_for('manual_reconnect') }}" class="btn btn-outline-light btn-sm">Reconnect</a>
         {% endif %}
       {% endif %}
-    </div>
+
+      <a href="#" id="shutdown-button" class="text-danger ms-3" title="Shutdown Server">
+        <i class="bi bi-power fs-4"></i>
+      </a>
+      </div>
   </nav>
 
-  <!-- Main Content -->
   <div class="container text-center flex-fill d-flex flex-column justify-content-center">
     {% block content %}{% endblock %}
   </div>
 
-  <!-- Bootstrap JS (for completeness, though not heavily used here) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+
+
+  <script>
+    document.getElementById('shutdown-button').addEventListener('click', function(e) {
+      e.preventDefault();
+      if (confirm('Are you sure you want to shut down the server?')) {
+        // "Fire-and-forget" the shutdown request. We do not wait for a response
+        // because the server will be terminated before it can send one.
+        fetch("{{ url_for('shutdown') }}", { method: 'POST' });
+
+        // Immediately update the page and prepare to close the window.
+        document.body.innerHTML = '<div class="container text-center flex-fill d-flex flex-column justify-content-center"><h2>Server is shutting down. You may now close this window.</h2></div>';
+        
+        // Give the fetch request a moment to be sent before closing.
+        setTimeout(function() {
+          window.close();
+        }, 750); // Increased delay slightly
+      }
+    });
+  </script>
+
+  </body>
 </html>

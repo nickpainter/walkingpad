@@ -1,8 +1,9 @@
 import asyncio
+import os
 import threading
-from threading import Timer # Add this import
-import webbrowser # Add this import
-from flask import Flask, render_template, redirect, url_for, jsonify, make_response
+from threading import Timer 
+import webbrowser 
+from flask import Flask, render_template, redirect, url_for, jsonify, make_response, request
 from bleak import BleakScanner
 from ph4_walkingpad.pad import Controller, WalkingPad
 
@@ -272,9 +273,6 @@ def resume_session():
     return redirect(url_for("root"))
 
 
-
-
-
 # ── Live JSON endpoint ───────────────────────────────────────────────────
 @app.route("/stats", endpoint="get_stats")
 def stats_json():
@@ -289,6 +287,17 @@ def stats_json():
     return resp
 
 
+# ── Shutdown endpoint ──────────────────────────────────────────────────
+@app.route("/shutdown", methods=['POST'])
+def shutdown():
+    """Forcefully shut down the Flask application process."""
+    print("[INFO] Server shutting down via forceful exit...")
+    # Use os._exit() for a hard stop. This is more reliable if the
+    # werkzeug shutdown hook is unavailable. Note that this call is
+    # immediate and will not return a response to the client.
+    os._exit(0)
+
+
 # ── Kick off BLE thread & run Flask dev server ──────────────────────────
 # _start_ble_thread() # <--- REMOVE OR COMMENT OUT THIS LINE
 
@@ -299,4 +308,5 @@ if __name__ == "__main__":
 
     # Start the Flask app after a 1-second delay to open the browser
     Timer(1, open_browser).start()
-    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
+    
+    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True, use_reloader=False)
