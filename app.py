@@ -20,6 +20,11 @@ KM_TO_MI = 0.621371
 KMH_TO_MPH = 0.621371
 KCAL_PER_MILE = 95  # rough kcal per mile
 
+# Speed control constants
+MAX_SPEED_KMH = 6.0  # Approx 3.7 mph, a common max for these pads
+MIN_SPEED_KMH = 1.0
+SPEED_STEP = 0.5  # Speed change per button press in km/h
+
 
 def kcal_estimate(miles: float) -> float:
     return KCAL_PER_MILE * miles
@@ -272,6 +277,41 @@ def resume_session():
     asyncio.run_coroutine_threadsafe(seq(), ble_loop)
     return redirect(url_for("root"))
 
+
+# ── Speed Controls ───────────────────────────────────────────────────────
+@app.route("/decrease_speed")
+def decrease_speed():
+    """Decrease the belt speed by one step."""
+    if not belt_running:
+        return redirect(url_for("root"))
+
+    new_speed_kmh = max(MIN_SPEED_KMH, current_speed_kmh - SPEED_STEP)
+    dev_speed = int(new_speed_kmh * 10)
+    asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
+    return redirect(url_for("root"))
+
+
+@app.route("/increase_speed")
+def increase_speed():
+    """Increase the belt speed by one step."""
+    if not belt_running:
+        return redirect(url_for("root"))
+
+    new_speed_kmh = min(MAX_SPEED_KMH, current_speed_kmh + SPEED_STEP)
+    dev_speed = int(new_speed_kmh * 10)
+    asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
+    return redirect(url_for("root"))
+
+
+@app.route("/max_speed")
+def max_speed():
+    """Set the belt speed to maximum."""
+    if not belt_running:
+        return redirect(url_for("root"))
+    
+    dev_speed = int(MAX_SPEED_KMH * 10)
+    asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
+    return redirect(url_for("root"))
 
 # ── Live JSON endpoint ───────────────────────────────────────────────────
 @app.route("/stats", endpoint="get_stats")

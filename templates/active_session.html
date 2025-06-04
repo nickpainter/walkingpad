@@ -30,7 +30,20 @@
         </div>
     </div>
 
-    <a href="{{ url_for('pause_session') }}" class="btn btn-custom-primary">Pause</a>
+    <div class="d-flex justify-content-center gap-2">
+        <a href="{{ url_for('decrease_speed') }}" class="btn btn-custom-primary d-flex align-items-center gap-2">
+            <i class="bi bi-dash-circle"></i> Decrease
+        </a>
+        <a href="{{ url_for('pause_session') }}" class="btn btn-custom-primary d-flex align-items-center gap-2">
+            <i class="bi bi-pause-fill"></i> Pause
+        </a>
+        <a href="{{ url_for('increase_speed') }}" class="btn btn-custom-primary d-flex align-items-center gap-2">
+            <i class="bi bi-plus-circle"></i> Increase
+        </a>
+        <a href="{{ url_for('max_speed') }}" class="btn btn-custom-primary d-flex align-items-center gap-2">
+            <i class="bi bi-fast-forward-fill"></i> Max
+        </a>
+    </div>
 </div>
 
 <script>
