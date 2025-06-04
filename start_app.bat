@@ -1,3 +1,6 @@
+:: Make a shortcut to this file with the following syntax in the target field:
+:: C:\Windows\System32\cmd.exe /c "C:\folder\location\walkingpad\start_app.bat"
+
 @echo off
 ECHO Activating virtual environment...
 
@@ -8,5 +11,3 @@ ECHO Starting WalkingPad Controller...
 
 REM Run the application
 python "%~dp0run.py"
-
-pause
