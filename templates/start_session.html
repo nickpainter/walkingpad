@@ -32,4 +32,17 @@
 
     <a href="{{ url_for('start_session') }}" class="btn btn-custom-primary">Start</a>
 </div>
+
+<script>
+  setInterval(function(){
+      fetch("{{ url_for('get_stats') }}")
+          .then(response => response.json())
+          .then(data => {
+              if (data.is_connected === false) {
+                  window.location.reload();
+              }
+          });
+  }, 3000); // A slower 3-second poll is fine here too
+</script>
+
 {% endblock %}

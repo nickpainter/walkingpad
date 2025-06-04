@@ -32,4 +32,19 @@
 
     <a href="{{ url_for('resume_session') }}" class="btn btn-custom-primary">Resume</a>
 </div>
+
+
+<script>
+  setInterval(function(){
+    fetch("{{ url_for('get_stats') }}")
+      .then(response => response.json())
+      .then(data => {
+        // If the connection has dropped, reload the page
+        if (data.is_connected === false) {
+          window.location.reload();
+        }
+      });
+  }, 3000); // Check every 3 seconds
+</script>
+
 {% endblock %}

@@ -51,20 +51,24 @@
     fetch("{{ url_for('get_stats') }}")
       .then(response => response.json())
       .then(data => {
+        // --- NEW: Highest priority check for connection status ---
+        if (data.is_connected === false) {
+          window.location.reload();
+          return; // Stop processing if disconnected
+        }
+
         // Check if the server has auto-paused the session
         if (data.is_running === false) {
-          // If the belt is no longer running, reload the page.
-          // The server will then serve the 'paused_session.html' template.
           window.location.reload();
         } else {
-          // Otherwise, just update the stats on the current page.
+          // Update the stats on the current page
           document.getElementById("speed").innerText = data.speed.toFixed(1) + ' mph';
           document.getElementById("distance").innerText = data.distance.toFixed(2) + ' mi';
-          document.getElementById("steps").innerText = data.steps;
+          document.getElementById("steps").innerText = parseInt(data.steps, 10);
           document.getElementById("calories").innerText = data.calories.toFixed(0);
         }
       });
-  }, 1000);
+  }, 1500); // Polling every 1.5 seconds is fine
 </script>
 
 {% endblock %}

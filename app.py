@@ -91,6 +91,10 @@ async def _connect_to_pad() -> bool:
 
     controller = Controller()
     await controller.run(dev.address)
+
+    if hasattr(controller, "client") and controller.client:
+        controller.client.set_disconnected_callback(_handle_disconnect)
+
     await controller.switch_mode(WalkingPad.MODE_MANUAL)
 
     def _status_cb(_sender, st):
@@ -210,6 +214,15 @@ def _start_ble_thread():
     connection_failed = False
     threading.Thread(target=_ble_thread, daemon=True).start()
 
+def _handle_disconnect(client):
+    """Callback function to handle unexpected disconnections."""
+    global connected, belt_running, connecting, connection_failed
+    if connected: # Only log if we thought we were connected
+        logging.warning("Device has disconnected unexpectedly.")
+    connected = False
+    belt_running = False
+    connecting = False
+    connection_failed = True
 
 # ── Flask routes ────────────────────────────────────────────────────────
 @app.route("/")
@@ -283,23 +296,34 @@ def pause_session():
 @app.route("/resume", endpoint="resume")
 @app.route("/resume_session", endpoint="resume_session")
 def resume_session():
-    global belt_running, _auto_pause_grace_until  # <-- Add _auto_pause_grace_until here
+    global belt_running, _auto_pause_grace_until
     if belt_running or not session_active:
         return redirect(url_for("root"))
     
     belt_running = True
-    # Set a 5-second grace period during which auto-pause is disabled
     _auto_pause_grace_until = time.time() + 5
 
     async def seq():
         try:
+            # --- NEW: Connection Health Check ---
+            # Before resuming, send a quick status request to ensure the connection is alive.
+            logging.info("Checking connection health before resuming...")
+            await controller.ask_stats()
+            logging.info("Connection is healthy. Resuming session.")
+            # --- END HEALTH CHECK ---
+
+            # Original resume logic
             await controller.start_belt()
             await asyncio.sleep(0.5)
             await controller.change_speed(int(resume_speed_kmh * 10))
             await asyncio.sleep(0.5)
             asyncio.create_task(_stats_monitor())
+
         except Exception as exc:
-            logging.error(f"Resume sequence error: {exc}")
+            # This block now catches both a failed health check and other resume errors.
+            logging.error(f"Failed to resume session, likely due to a stale connection: {exc}")
+            # Manually trigger our disconnect logic to reset the app's state correctly.
+            _handle_disconnect(None)
 
     asyncio.run_coroutine_threadsafe(seq(), ble_loop)
     return redirect(url_for("root"))
@@ -344,16 +368,16 @@ def max_speed():
 # ── Live JSON endpoint ───────────────────────────────────────────────────
 @app.route("/stats", endpoint="get_stats")
 def stats_json():
+
     data = dict(
-        # Add this new key to report the current running state
+        is_connected=connected,  # <-- ADD THIS LINE
         is_running=belt_running,
-        
-        # Original keys
         speed=round(current_speed_kmh * KMH_TO_MPH, 1),
         distance=round(current_distance_km * KM_TO_MI, 2),
         steps=current_steps,
         calories=round(current_calories),
     )
+
     resp = make_response(jsonify(data))
     resp.headers["Cache-Control"] = "no-store"
     return resp
