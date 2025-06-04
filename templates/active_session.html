@@ -47,15 +47,24 @@
 </div>
 
 <script>
-    setInterval(function(){
-      fetch("{{ url_for('get_stats') }}")
-        .then(response => response.json())
-        .then(data => {
+  setInterval(function(){
+    fetch("{{ url_for('get_stats') }}")
+      .then(response => response.json())
+      .then(data => {
+        // Check if the server has auto-paused the session
+        if (data.is_running === false) {
+          // If the belt is no longer running, reload the page.
+          // The server will then serve the 'paused_session.html' template.
+          window.location.reload();
+        } else {
+          // Otherwise, just update the stats on the current page.
           document.getElementById("speed").innerText = data.speed.toFixed(1) + ' mph';
           document.getElementById("distance").innerText = data.distance.toFixed(2) + ' mi';
           document.getElementById("steps").innerText = data.steps;
           document.getElementById("calories").innerText = data.calories.toFixed(0);
-        });
-    }, 1000);
+        }
+      });
+  }, 1000);
 </script>
+
 {% endblock %}

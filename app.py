@@ -4,6 +4,8 @@ import os
 import threading
 import webbrowser
 from threading import Timer
+import time
+from collections import deque
 
 from bleak import BleakScanner
 from flask import Flask, render_template, redirect, url_for, jsonify, make_response, request
@@ -39,6 +41,8 @@ connected = connecting = connection_failed = False
 ble_loop: asyncio.AbstractEventLoop | None = None
 controller: Controller | None = None
 _pad_address: str | None = None
+_auto_pause_grace_until = 0
+speed_history = deque(maxlen=15)
 
 session_active = belt_running = False
 resume_speed_kmh = 2.0  # default if none yet
@@ -115,10 +119,33 @@ async def _connect_to_pad() -> bool:
 
 
 def process_status_packet(dev_dist, dev_steps, dev_speed):
-    """Update cumulative stats from raw values (called by callback)."""
+    """Update cumulative stats from raw values AND handle auto-pause."""
+    global belt_running, resume_speed_kmh, _auto_pause_grace_until
     global current_speed_kmh, current_distance_km, current_steps, current_calories
     global _last_dev_dist, _last_dev_steps
 
+    new_reported_speed_kmh = dev_speed / 10.0
+
+    # Continuously populate the speed history with stable, non-zero speeds.
+    if belt_running and new_reported_speed_kmh > MIN_SPEED_KMH:
+        speed_history.append(new_reported_speed_kmh)
+
+    # AUTO-PAUSE LOGIC
+    if time.time() > _auto_pause_grace_until:
+        if belt_running and new_reported_speed_kmh == 0 and current_speed_kmh > 0:
+            logging.info("Belt has stopped unexpectedly. Auto-pausing session.")
+            
+            # Use the OLDEST speed from history to ignore the deceleration phase.
+            if speed_history:
+                resume_speed_kmh = speed_history[0] # Use the first (oldest) item
+            else:
+                # Fallback if pause happens too quickly after starting
+                resume_speed_kmh = MIN_SPEED_KMH
+
+            belt_running = False
+
+    # CUMULATIVE STATS LOGIC (is unchanged)
+    # ...
     if dev_dist < _last_dev_dist:
         _last_dev_dist = 0
     current_distance_km += (dev_dist - _last_dev_dist) / 100.0
@@ -129,7 +156,7 @@ def process_status_packet(dev_dist, dev_steps, dev_speed):
     current_steps += dev_steps - _last_dev_steps
     _last_dev_steps = dev_steps
 
-    current_speed_kmh = dev_speed / 10.0
+    current_speed_kmh = new_reported_speed_kmh
     current_calories = kcal_estimate(current_distance_km * KM_TO_MI)
 
 
@@ -219,6 +246,8 @@ def start_session():
 
     current_distance_km = current_steps = current_calories = 0.0
     resume_speed_kmh = 2.0
+    speed_history.clear() 
+
     session_active = True
     belt_running = True
 
@@ -235,25 +264,32 @@ def start_session():
 
 
 # ── Pause / Resume ───────────────────────────────────────────────────────
+
 @app.route("/pause", endpoint="pause")
 @app.route("/pause_session", endpoint="pause_session")
 def pause_session():
     global belt_running, resume_speed_kmh
     if not belt_running:
         return redirect(url_for("root"))
-    resume_speed_kmh = max(current_speed_kmh, 2.0)
+    
+    # Use the most recent speed from our history for manual pause
+    if speed_history:
+        resume_speed_kmh = speed_history[-1]
+
     belt_running = False
     asyncio.run_coroutine_threadsafe(controller.stop_belt(), ble_loop)
     return redirect(url_for("root"))
 
-
 @app.route("/resume", endpoint="resume")
 @app.route("/resume_session", endpoint="resume_session")
 def resume_session():
-    global belt_running
+    global belt_running, _auto_pause_grace_until  # <-- Add _auto_pause_grace_until here
     if belt_running or not session_active:
         return redirect(url_for("root"))
+    
     belt_running = True
+    # Set a 5-second grace period during which auto-pause is disabled
+    _auto_pause_grace_until = time.time() + 5
 
     async def seq():
         try:
@@ -309,6 +345,10 @@ def max_speed():
 @app.route("/stats", endpoint="get_stats")
 def stats_json():
     data = dict(
+        # Add this new key to report the current running state
+        is_running=belt_running,
+        
+        # Original keys
         speed=round(current_speed_kmh * KMH_TO_MPH, 1),
         distance=round(current_distance_km * KM_TO_MI, 2),
         steps=current_steps,
