@@ -31,8 +31,17 @@ SPEED_STEP = 0.6  # Speed change per button press in km/h
 SLOW_WALK_SPEED_KMH = 4.5 # Approx 2.8 MPH
 
 
+
 def kcal_estimate(miles: float) -> float:
     return KCAL_PER_MILE * miles
+
+# In app.py
+def format_seconds_to_hms(total_seconds):
+    """Converts total seconds to H:MM:SS string format."""
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+    return f"{hours}:{minutes:02}:{seconds:02}"
 
 
 # ── Flask & global state ────────────────────────────────────────────────
@@ -51,6 +60,7 @@ resume_speed_kmh = 2.0  # default if none yet
 current_speed_kmh = current_distance_km = 0.0
 current_steps = 0
 current_calories = 0.0
+current_session_active_seconds = 0 
 
 _last_dev_dist = _last_dev_steps = 0
 
@@ -167,8 +177,13 @@ def process_status_packet(dev_dist, dev_steps, dev_speed):
 
 async def _stats_monitor():
     """Active monitor: explicitly request a status packet every second."""
+    global current_session_active_seconds
     logging.info("Stats monitor started")
     while belt_running:
+        
+        if belt_running: # Double check, as belt_running can change between await calls
+            current_session_active_seconds += 1
+        
         try:
             status = await controller.ask_stats()
             if status:
@@ -229,16 +244,25 @@ def _handle_disconnect(client):
 @app.route("/")
 def root():
     if not connected:
-        return render_template("connecting.html")
+        return render_template("connecting.html") #
+
+    time_active_display = "0:00:00" # Default for start/paused if not running
+    if session_active: # Only calculate if a session is or was active
+        time_active_display = format_seconds_to_hms(current_session_active_seconds)
+
     if not session_active:
-        return render_template("start_session.html")
+        # For start_session, always show 0 time initially
+        return render_template("start_session.html", time_active="0:00:00")
+
     template = "active_session.html" if belt_running else "paused_session.html"
+
     return render_template(
         template,
         speed=current_speed_kmh * KMH_TO_MPH,
         distance=current_distance_km * KM_TO_MI,
         steps=current_steps,
         calories=current_calories,
+        time_active=time_active_display 
     )
 
 
@@ -254,11 +278,13 @@ def reconnect():
 def start_session():
     """Begin a new session: reset counters, start belt, launch stats monitor."""
     global session_active, belt_running, current_distance_km, current_steps, current_calories, resume_speed_kmh
+    global current_session_active_seconds
 
     if not connected:
         return redirect(url_for("root"))
 
     current_distance_km = current_steps = current_calories = 0.0
+    current_session_active_seconds = 0
     resume_speed_kmh = 2.0
     speed_history.clear() 
 
@@ -392,14 +418,17 @@ def max_speed():
 # ── Live JSON endpoint ───────────────────────────────────────────────────
 @app.route("/stats", endpoint="get_stats")
 def stats_json():
+    # Calculate formatted_time_active within the function scope
+    formatted_time_active = format_seconds_to_hms(current_session_active_seconds)
 
     data = dict(
-        is_connected=connected,  # <-- ADD THIS LINE
-        is_running=belt_running,
+        is_connected=connected,      
+        is_running=belt_running,     
         speed=round(current_speed_kmh * KMH_TO_MPH, 1),
         distance=round(current_distance_km * KM_TO_MI, 2),
         steps=current_steps,
         calories=round(current_calories),
+        time_active=formatted_time_active 
     )
 
     resp = make_response(jsonify(data))

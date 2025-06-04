@@ -4,31 +4,36 @@
     <h1 class="content-title mb-4">Active Session</h1>
 
     <div class="row g-4 mb-5">
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <p class="stat-label">Speed</p>
-                <p class="stat-value" id="speed">{{ "%.1f"|format(speed) }} mph</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <p class="stat-label">Distance</p>
-                <p class="stat-value" id="distance">{{ "%.2f"|format(distance) }} mi</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <p class="stat-label">Steps</p>
-                <p class="stat-value" id="steps">{{ steps|int }}</p>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="stat-card">
-                <p class="stat-label">Calories</p>
-                <p class="stat-value" id="calories">{{ "%.0f"|format(calories) }}</p>
-            </div>
-        </div>
-    </div>
+      <div class="col-lg col-md-4 col-6">
+          <div class="stat-card">
+              <p class="stat-label">Time</p>
+              <p class="stat-value" id="time_active">{{ time_active }}</p>
+          </div>
+      </div>
+      <div class="col-lg col-md-4 col-6"> <div class="stat-card">
+              <p class="stat-label">Speed</p>
+              <p class="stat-value" id="speed">{{ "%.1f"|format(speed) }} mph</p>
+          </div>
+      </div>
+      <div class="col-lg col-md-4 col-6">
+          <div class="stat-card">
+              <p class="stat-label">Distance</p>
+              <p class="stat-value" id="distance">{{ "%.2f"|format(distance) }} mi</p>
+          </div>
+      </div>
+      <div class="col-lg col-md-4 col-6">
+          <div class="stat-card">
+              <p class="stat-label">Steps</p>
+              <p class="stat-value" id="steps">{{ steps|int }}</p>
+          </div>
+      </div>
+      <div class="col-lg col-md-4 col-6">
+          <div class="stat-card">
+              <p class="stat-label">Calories</p>
+              <p class="stat-value" id="calories">{{ "%.0f"|format(calories) }}</p>
+          </div>
+      </div>
+  </div>
 
     <div class="d-flex justify-content-center gap-2">
         <a href="{{ url_for('slow_speed') }}" class="btn btn-custom-primary d-flex align-items-center gap-2">
@@ -64,6 +69,7 @@
           window.location.reload();
         } else {
           // Update the stats on the current page
+          document.getElementById("time_active").innerText = data.time_active;
           document.getElementById("speed").innerText = data.speed.toFixed(1) + ' mph';
           document.getElementById("distance").innerText = data.distance.toFixed(2) + ' mi';
           document.getElementById("steps").innerText = parseInt(data.steps, 10);

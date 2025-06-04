@@ -4,25 +4,30 @@
     <h1 class="content-title mb-4">Start New Session</h1>
 
     <div class="row g-4 mb-5">
-        <div class="col-md-3 col-6">
+        <div class="col-lg col-md-4 col-6">
+            <div class="stat-card">
+                <p class="stat-label">Time</p>
+                <p class="stat-value">{{ time_active }}</p> </div>
+        </div>
+        <div class="col-lg col-md-4 col-6">
             <div class="stat-card">
                 <p class="stat-label">Speed</p>
                 <p class="stat-value">0.0 km/h</p>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <div class="stat-card">
                 <p class="stat-label">Distance</p>
                 <p class="stat-value">0.0 km</p>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <div class="stat-card">
                 <p class="stat-label">Steps</p>
                 <p class="stat-value">0</p>
             </div>
         </div>
-        <div class="col-md-3 col-6">
+        <div class="col-lg col-md-4 col-6">
             <div class="stat-card">
                 <p class="stat-label">Calories</p>
                 <p class="stat-value">0 kcal</p>
@@ -42,7 +47,7 @@
                   window.location.reload();
               }
           });
-  }, 3000); // A slower 3-second poll is fine here too
+  }, 3000);
 </script>
 
 {% endblock %}
