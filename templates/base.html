@@ -1,46 +1,143 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>WalkingPad Controller</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-  {% if connecting %}
-  <meta http-equiv="refresh" content="3">
-  {% endif %}
-  <style>
-    body { background-color: #f8f9fa; }
-  </style>
+    <meta charset="UTF-8">
+    <title>WalkingPad Controller</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Noto+Sans:wght@400;500;700;900&family=Space+Grotesk:wght@400;500;700">
+
+    {% if connecting %}
+    <meta http-equiv="refresh" content="3">
+    {% endif %}
+
+    <style>
+        /* Custom properties from the design file */
+        :root {
+            --background-color: #f8fafc; /* bg-slate-50 */
+            --card-color: #e7edf4;
+            --text-color: #0d141c;
+            --primary-blue: #0c7ff2;
+            --border-color: #e7edf4;
+        }
+
+        body {
+            font-family: "Space Grotesk", "Noto Sans", sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+
+        /* Header styles */
+        .app-header {
+            background-color: white;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .app-header .navbar-brand {
+            font-weight: 700;
+            font-size: 1.25rem;
+            color: var(--text-color);
+        }
+        
+        /* NEW styles for the header buttons and indicator */
+        .btn-header-close {
+            background-color: var(--card-color);
+            color: var(--text-color);
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: none;
+            padding: 0.3rem 0.8rem;
+        }
+        .btn-header-close:hover {
+            background-color: #d8e0ea;
+            color: var(--text-color);
+        }
+
+        .connection-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .connection-indicator .bi {
+            font-size: 1.2rem;
+        }
+        /* END NEW styles */
+
+
+        /* Main content styles */
+        .content-title {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-card {
+            background-color: var(--card-color);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .stat-card .stat-label {
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .stat-card .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+
+        /* Custom button styles */
+        .btn-custom-primary {
+            background-color: var(--primary-blue);
+            color: white;
+            font-weight: 700;
+            padding: 0.75rem 2rem;
+        }
+        .btn-custom-primary:hover {
+            background-color: #0a6bcf; /* A slightly darker blue for hover */
+            color: white;
+        }
+    </style>
 </head>
-<body class="d-flex flex-column" style="min-height: 100vh;">
-  <nav class="navbar navbar-dark bg-dark px-3">
-    <span class="navbar-brand">WalkingPad Controller</span>
-    <div class="ms-auto d-flex align-items-center">
-      {% if connected %}
-        <span class="text-success fw-bold">Connected</span>
-      {% else %}
-        {% if connecting %}
-          <span class="text-warning">Connecting...</span>
-        {% else %}
-          <span class="text-danger fw-bold me-2">Disconnected</span>
-          <a href="{{ url_for('manual_reconnect') }}" class="btn btn-outline-light btn-sm">Reconnect</a>
-        {% endif %}
-      {% endif %}
+<body>
+    <header class="app-header sticky-top">
+        <nav class="container-xl d-flex align-items-center justify-content-between py-3 px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('root') }}">
+                <i class="bi bi-caret-down-fill"></i>
+                <span>WalkingPad Controller</span>
+            </a>
 
-      <a href="#" id="shutdown-button" class="text-danger ms-3" title="Shutdown Server">
-        <i class="bi bi-power fs-4"></i>
-      </a>
-      </div>
-  </nav>
+            <div class="d-flex align-items-center gap-4">
+                <button id="shutdown-button" class="btn btn-header-close">Close</button>
+                
+                <div class="connection-indicator">
+                    {% if connected %}
+                        <i class="bi bi-wifi text-success"></i>
+                        <span class="text-success d-none d-md-inline">Connected</span>
+                    {% elif connecting %}
+                        <i class="bi bi-arrow-repeat text-warning"></i>
+                        <span class="text-warning d-none d-md-inline">Connecting</span>
+                    {% else %}
+                        <i class="bi bi-wifi-off text-danger"></i>
+                        <span class="text-danger d-none d-md-inline">Disconnected</span>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+    </header>
 
-  <div class="container text-center flex-fill d-flex flex-column justify-content-center">
-    {% block content %}{% endblock %}
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-
-  <script>
+    <main class="container-xl py-5">
+        <div class="mx-auto" style="max-width: 960px;">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
     document.getElementById('shutdown-button').addEventListener('click', function(e) {
       e.preventDefault();
       if (confirm('Are you sure you want to shut down the server?')) {
@@ -57,7 +154,6 @@
         }, 750); // Increased delay slightly
       }
     });
-  </script>
-
-  </body>
+    </script>
+</body>
 </html>

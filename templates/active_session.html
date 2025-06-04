@@ -1,39 +1,48 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="mb-4">
-    <h1 class="display-4">
-        <span id="speed">{{ "%.1f"|format(speed * 0.621371) }}</span>
-        <small class="fs-5 text-muted">mph</small>
-    </h1>
-  </div>
-  <div class="row justify-content-center mb-4">
-    <div class="col-auto mx-3">
-        <h5><span id="distance">{{ "%.2f"|format(distance * 0.621371) }}</span> miles</h5>
-      <div class="text-muted">Distance</div>
+<div class="text-center">
+    <h1 class="content-title mb-4">Active Session</h1>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <p class="stat-label">Speed</p>
+                <p class="stat-value" id="speed">{{ "%.1f"|format(speed) }} mph</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <p class="stat-label">Distance</p>
+                <p class="stat-value" id="distance">{{ "%.2f"|format(distance) }} mi</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <p class="stat-label">Steps</p>
+                <p class="stat-value" id="steps">{{ steps }}</p>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="stat-card">
+                <p class="stat-label">Calories</p>
+                <p class="stat-value" id="calories">{{ "%.0f"|format(calories) }}</p>
+            </div>
+        </div>
     </div>
-    <div class="col-auto mx-3">
-      <h5><span id="steps">{{ steps }}</span></h5>
-      <div class="text-muted">Steps</div>
-    </div>
-    <div class="col-auto mx-3">
-      <h5><span id="calories">{{ "%.0f"|format(calories) }}</span></h5>
-      <div class="text-muted">Calories</div>
-    </div>
-  </div>
-  <p>
-    <a href="{{ url_for('pause_session') }}" class="btn btn-warning btn-lg">Pause</a>
-  </p>
-  <!-- Live stats update script -->
-  <script>
+
+    <a href="{{ url_for('pause_session') }}" class="btn btn-custom-primary">Pause</a>
+</div>
+
+<script>
     setInterval(function(){
       fetch("{{ url_for('get_stats') }}")
         .then(response => response.json())
         .then(data => {
-          document.getElementById("speed").innerText = data.speed.toFixed(1);
-          document.getElementById("distance").innerText = data.distance.toFixed(2);
+          document.getElementById("speed").innerText = data.speed.toFixed(1) + ' mph';
+          document.getElementById("distance").innerText = data.distance.toFixed(2) + ' mi';
           document.getElementById("steps").innerText = data.steps;
           document.getElementById("calories").innerText = data.calories.toFixed(0);
         });
     }, 1000);
-  </script>
+</script>
 {% endblock %}
