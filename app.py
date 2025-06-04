@@ -230,6 +230,9 @@ def resume_session():
         try:
             await controller.start_belt()
             await asyncio.sleep(0.5)
+            # Set speed to the value stored before pausing
+            await controller.change_speed(int(resume_speed_kmh * 10))
+            await asyncio.sleep(0.5)
             asyncio.create_task(_stats_monitor())
         except Exception as exc:
             print("[ERR] resume seq:", exc, flush=True)
