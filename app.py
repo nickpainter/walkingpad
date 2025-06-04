@@ -27,7 +27,7 @@ KCAL_PER_MILE = 95  # rough kcal per mile
 # Speed control constants
 MAX_SPEED_KMH = 6.0  # Approx 3.7 mph, a common max for these pads
 MIN_SPEED_KMH = 1.0
-SPEED_STEP = 0.5  # Speed change per button press in km/h
+SPEED_STEP = 0.6  # Speed change per button press in km/h
 
 
 def kcal_estimate(miles: float) -> float:
