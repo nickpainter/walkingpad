@@ -1,19 +1,21 @@
 import asyncio
+import logging
 import os
 import threading
-from threading import Timer 
-import webbrowser 
-from flask import Flask, render_template, redirect, url_for, jsonify, make_response, request
+import webbrowser
+from threading import Timer
+
 from bleak import BleakScanner
+from flask import Flask, render_template, redirect, url_for, jsonify, make_response, request
 from ph4_walkingpad.pad import Controller, WalkingPad
 
-"""WalkingPad Controller – clean edition (2025‑06‑03)
-
-* Single copy of every route handler
-* Uses controller.latest_status for live stats (no request packets)
-* Prints debug lines so we can verify data flow
-* Threaded dev server so /stats fetches don’t block
-"""
+# ── Logging Setup ────────────────────────────────────────────────────────
+# All print() statements will be replaced with this logging configuration.
+# It provides timed, leveled output. Set level=logging.DEBUG to see verbose messages.
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+)
 
 # ── Conversion constants ─────────────────────────────────────────────────
 KM_TO_MI = 0.621371
@@ -36,7 +38,7 @@ app = Flask(__name__)
 connected = connecting = connection_failed = False
 ble_loop: asyncio.AbstractEventLoop | None = None
 controller: Controller | None = None
-_pad_address: str | None = None  # Add this line
+_pad_address: str | None = None
 
 session_active = belt_running = False
 resume_speed_kmh = 2.0  # default if none yet
@@ -59,63 +61,56 @@ async def _connect_to_pad() -> bool:
     global controller, _pad_address
     dev = None
 
-    # 1. If we have a known address, try to connect directly first.
     if _pad_address:
-        print(f"[INFO] Attempting to connect to known address: {_pad_address}", flush=True)
+        logging.info(f"Attempting to connect to known address: {_pad_address}")
         try:
-            # Use a short timeout for direct connection attempts
             dev = await BleakScanner.find_device_by_address(_pad_address, timeout=5)
         except Exception as exc:
-            print(f"[WARN] Failed to find device by address: {exc}", flush=True)
+            logging.warning(f"Failed to find device by address: {exc}")
             dev = None
 
-    # 2. If direct connection failed or we have no address, scan by name.
     if not dev:
-        print("[INFO] Scanning for device by name 'WalkingPad'...", flush=True)
+        logging.info("Scanning for device by name 'WalkingPad'...")
         try:
             dev = await BleakScanner.find_device_by_name("WalkingPad", timeout=10)
         except Exception as exc:
-            print(f"[WARN] Failed to find device by name: {exc}", flush=True)
+            logging.warning(f"Failed to find device by name: {exc}")
             dev = None
 
-    # 3. If we found a device, connect and save its address.
     if not dev:
-        print("[ERR] Could not find WalkingPad. Ensure it is on and in range.", flush=True)
-        _pad_address = None  # Clear address if connection fails
+        logging.error("Could not find WalkingPad. Ensure it is on and in range.")
+        _pad_address = None
         return False
 
-    # Save the address for future connections
     _pad_address = dev.address
-    print(f"[INFO] Device found! Address: {_pad_address}", flush=True)
+    logging.info(f"Device found! Address: {_pad_address}")
 
     controller = Controller()
     await controller.run(dev.address)
     await controller.switch_mode(WalkingPad.MODE_MANUAL)
 
-    # local callback to capture every pushed status packet
     def _status_cb(_sender, st):
         try:
             if isinstance(st, dict):
-                dist  = st.get("dist", 0)
+                dist = st.get("dist", 0)
                 steps = st.get("steps", 0)
                 speed = st.get("speed", 0)
-            else:  # WalkingPadCurStatus object
-                dist  = getattr(st, "dist", 0)
+            else:
+                dist = getattr(st, "dist", 0)
                 steps = getattr(st, "steps", 0)
                 speed = getattr(st, "speed", 0)
             process_status_packet(dist, steps, speed)
-            print(f"DBG(push) d={dist} s={steps} v={speed}", flush=True)
+            logging.debug(f"Push d={dist} s={steps} v={speed}")
         except Exception as exc:
-            print("[WARN] status_cb:", exc, flush=True)
+            logging.warning(f"status_cb error: {exc}")
 
     controller.on_cur_status_received = _status_cb
 
-    # some versions need notifications enabled explicitly
     if hasattr(controller, "enable_notifications"):
         try:
             await controller.enable_notifications()
         except Exception as exc:
-            print("[WARN] enable_notifications failed:", exc, flush=True)
+            logging.warning(f"enable_notifications failed: {exc}")
     return True
 
 
@@ -139,25 +134,24 @@ def process_status_packet(dev_dist, dev_steps, dev_speed):
 
 
 async def _stats_monitor():
-    """Active monitor: explicitly request a status packet every second.
-    Works even on firmware that does not push notifications."""
-    print("[MON] monitor started", flush=True)
+    """Active monitor: explicitly request a status packet every second."""
+    logging.info("Stats monitor started")
     while belt_running:
         try:
             status = await controller.ask_stats()
             if status:
                 if isinstance(status, dict):
-                    dist  = status.get("dist", 0)
+                    dist = status.get("dist", 0)
                     steps = status.get("steps", 0)
                     speed = status.get("speed", 0)
                 else:
-                    dist  = getattr(status, "dist", 0)
+                    dist = getattr(status, "dist", 0)
                     steps = getattr(status, "steps", 0)
                     speed = getattr(status, "speed", 0)
                 process_status_packet(dist, steps, speed)
-                print("DBG", status, flush=True)
+                logging.debug(f"Poll {status}")
         except Exception as exc:
-            print("[WARN] ask_stats:", exc, flush=True)
+            logging.warning(f"ask_stats error: {exc}")
         await asyncio.sleep(1)
 
 
@@ -223,7 +217,6 @@ def start_session():
     if not connected:
         return redirect(url_for("root"))
 
-    # reset totals
     current_distance_km = current_steps = current_calories = 0.0
     resume_speed_kmh = 2.0
     session_active = True
@@ -235,11 +228,10 @@ def start_session():
             await asyncio.sleep(0.5)
             asyncio.create_task(_stats_monitor())
         except Exception as exc:
-            print("[ERR] start seq:", exc, flush=True)
+            logging.error(f"Start sequence error: {exc}")
 
     asyncio.run_coroutine_threadsafe(seq(), ble_loop)
     return redirect(url_for("root"))
-
 
 
 # ── Pause / Resume ───────────────────────────────────────────────────────
@@ -267,12 +259,11 @@ def resume_session():
         try:
             await controller.start_belt()
             await asyncio.sleep(0.5)
-            # Set speed to the value stored before pausing
             await controller.change_speed(int(resume_speed_kmh * 10))
             await asyncio.sleep(0.5)
             asyncio.create_task(_stats_monitor())
         except Exception as exc:
-            print("[ERR] resume seq:", exc, flush=True)
+            logging.error(f"Resume sequence error: {exc}")
 
     asyncio.run_coroutine_threadsafe(seq(), ble_loop)
     return redirect(url_for("root"))
@@ -313,6 +304,7 @@ def max_speed():
     asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
     return redirect(url_for("root"))
 
+
 # ── Live JSON endpoint ───────────────────────────────────────────────────
 @app.route("/stats", endpoint="get_stats")
 def stats_json():
@@ -331,22 +323,10 @@ def stats_json():
 @app.route("/shutdown", methods=['POST'])
 def shutdown():
     """Forcefully shut down the Flask application process."""
-    print("[INFO] Server shutting down via forceful exit...")
-    # Use os._exit() for a hard stop. This is more reliable if the
-    # werkzeug shutdown hook is unavailable. Note that this call is
-    # immediate and will not return a response to the client.
+    logging.info("Server shutting down via forceful exit...")
     os._exit(0)
 
 
-# ── Kick off BLE thread & run Flask dev server ──────────────────────────
-# _start_ble_thread() # <--- REMOVE OR COMMENT OUT THIS LINE
-
-if __name__ == "__main__":
-    # Function to open the browser (from previous request)
-    def open_browser():
-        webbrowser.open_new("http://127.0.0.1:5000")
-
-    # Start the Flask app after a 1-second delay to open the browser
-    Timer(1, open_browser).start()
-    
-    app.run(host="0.0.0.0", port=5000, debug=True, threaded=True, use_reloader=False)
+# ── Kick off BLE thread ──────────────────────────────────────────────────
+# The server is no longer started here. This just pre-starts the BLE thread.
+_start_ble_thread()
