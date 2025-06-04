@@ -1,5 +1,7 @@
 import asyncio
 import threading
+from threading import Timer # Add this import
+import webbrowser # Add this import
 from flask import Flask, render_template, redirect, url_for, jsonify, make_response
 from bleak import BleakScanner
 from ph4_walkingpad.pad import Controller, WalkingPad
@@ -262,4 +264,10 @@ def stats_json():
 _start_ble_thread()
 
 if __name__ == "__main__":
+    # Function to open the browser
+    def open_browser():
+        webbrowser.open_new("http://127.0.0.1:5000")
+
+    # Start the Flask app after a 1-second delay to open the browser
+    Timer(1, open_browser).start()
     app.run(host="0.0.0.0", port=5000, debug=True, threaded=True)
