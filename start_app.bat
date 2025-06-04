@@ -2,7 +2,7 @@
 ECHO Activating virtual environment...
 
 REM Activate the virtual environment
-call "%~dp0venv\Scripts\activate.bat"
+call "%~dp0.venv\Scripts\activate.bat"
 
 ECHO Starting WalkingPad Controller...
 
