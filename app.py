@@ -28,6 +28,7 @@ KCAL_PER_MILE = 95  # rough kcal per mile
 MAX_SPEED_KMH = 6.0  # Approx 3.7 mph, a common max for these pads
 MIN_SPEED_KMH = 1.0
 SPEED_STEP = 0.6  # Speed change per button press in km/h
+SLOW_WALK_SPEED_KMH = 4.5 # Approx 2.8 MPH
 
 
 def kcal_estimate(miles: float) -> float:
@@ -355,6 +356,15 @@ def decrease_speed():
     asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
     return redirect(url_for("root"))
 
+@app.route("/slow_speed")
+def slow_speed():
+    """Set the belt speed to a predefined slow walk speed."""
+    if not belt_running:
+        return redirect(url_for("root"))
+    
+    dev_speed = int(SLOW_WALK_SPEED_KMH * 10)
+    asyncio.run_coroutine_threadsafe(controller.change_speed(dev_speed), ble_loop)
+    return redirect(url_for("root"))
 
 @app.route("/increase_speed")
 def increase_speed():
