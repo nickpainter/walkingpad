@@ -293,39 +293,53 @@ def pause_session():
     asyncio.run_coroutine_threadsafe(controller.stop_belt(), ble_loop)
     return redirect(url_for("root"))
 
+
 @app.route("/resume", endpoint="resume")
 @app.route("/resume_session", endpoint="resume_session")
 def resume_session():
-    global belt_running, _auto_pause_grace_until
-    if belt_running or not session_active:
-        return redirect(url_for("root"))
+    global belt_running, _auto_pause_grace_until, session_active # session_active ensures we only resume active sessions
     
+    if not session_active: # Can't resume if no session was active
+        logging.warning("Resume called but no active session.")
+        return redirect(url_for("root"))
+
+    if belt_running: # Already running, do nothing
+        logging.info("Resume called but belt is already running.")
+        return redirect(url_for("root"))
+
+    # --- CRITICAL FIX: Optimistically set state for UI and grace period ---
+    logging.info("Resume button clicked. Setting app state to active.")
     belt_running = True
-    _auto_pause_grace_until = time.time() + 5
+    _auto_pause_grace_until = time.time() + 7 # Generous 7-second grace period for commands to take effect
 
     async def seq():
         try:
-            # --- NEW: Connection Health Check ---
-            # Before resuming, send a quick status request to ensure the connection is alive.
-            logging.info("Checking connection health before resuming...")
-            await controller.ask_stats()
-            logging.info("Connection is healthy. Resuming session.")
-            # --- END HEALTH CHECK ---
-
-            # Original resume logic
+            logging.info("Attempting resume: Sending wake-up and start sequence to device...")
+            
+            # Standard wake-up and start sequence
+            await controller.switch_mode(WalkingPad.MODE_STANDBY)
+            await asyncio.sleep(0.5) 
+            await controller.switch_mode(WalkingPad.MODE_MANUAL)
+            await asyncio.sleep(0.5) 
+            
             await controller.start_belt()
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.5) 
+            
+            logging.info(f"Setting speed to {resume_speed_kmh:.1f} km/h.")
             await controller.change_speed(int(resume_speed_kmh * 10))
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.5) # Allow speed change to propagate
+            
+            # Start the monitor if it wasn't running or to be sure
             asyncio.create_task(_stats_monitor())
+            logging.info("Resume sequence commands sent, monitor ensured.")
 
         except Exception as exc:
-            # This block now catches both a failed health check and other resume errors.
-            logging.error(f"Failed to resume session, likely due to a stale connection: {exc}")
-            # Manually trigger our disconnect logic to reset the app's state correctly.
-            _handle_disconnect(None)
+            logging.error(f"Error during resume sequence, device may have disconnected: {exc}")
+            _handle_disconnect(None) # This will set belt_running = False and connected = False
+                                     # The frontend polling will then reload to the correct disconnected/connecting page.
 
     asyncio.run_coroutine_threadsafe(seq(), ble_loop)
+    # The redirect will now happen after belt_running is True in the main thread.
     return redirect(url_for("root"))
 
 
