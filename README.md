@@ -159,7 +159,7 @@ A `start_app.bat` script is provided to automate VENV activation and running `ru
 
 ## Customization
 
-Some speed settings can be configured directly in `app.py`:
+Some speed settings can be configured directly in `app.py`.  All speeds are set in KPH:
 * `MAX_SPEED_KMH`: Default maximum speed for the "Max" button.
 * `MIN_SPEED_KMH`: Minimum speed the pad will be set to.
 * `SPEED_STEP`: How much the speed changes with "Increase"/"Decrease" buttons.
