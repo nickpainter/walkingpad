@@ -35,6 +35,22 @@ This application was built for my own needs, but can be easily adapted for your 
     * "Close" button in the app to cleanly shut down the server.
 * **Cross-Platform Server:** Runs on Windows, macOS, or Linux systems that have Python and a Bluetooth adapter.
 
+## Screenshots
+
+Below are some representative screenshots of the application in action:
+
+### Start Session Screen
+This is the initial screen you see after connecting to the WalkingPad, before a session has begun.
+![Start Session Screen](screenshots/start.png)
+
+### Active Session Screen
+Displays live stats while you are actively walking. Includes controls for speed and pausing.
+![Active Session Screen](screenshots/active.png)
+
+### Paused Session Screen
+Shown when a session is paused, either manually or automatically. Displays cumulative stats and allows you to resume.
+![Paused Session Screen](screenshots/paused.png)
+
 ## Supported Models
 
 This application is known to work with the **WalkingPad C1** model.
@@ -140,22 +156,6 @@ A `start_app.bat` script is provided to automate VENV activation and running `ru
 
 5.  **Ending the Application:**
     * Click the "Close" button in the header of the web interface. This will shut down the Python server application.
-
-## Screenshots
-
-Below are some representative screenshots of the application in action:
-
-### Start Session Screen
-This is the initial screen you see after connecting to the WalkingPad, before a session has begun.
-![Start Session Screen](screenshots/start.png)
-
-### Active Session Screen
-Displays live stats while you are actively walking. Includes controls for speed and pausing.
-![Active Session Screen](screenshots/active.png)
-
-### Paused Session Screen
-Shown when a session is paused, either manually or automatically. Displays cumulative stats and allows you to resume.
-![Paused Session Screen](screenshots/paused.png)
 
 ## Customization
 
