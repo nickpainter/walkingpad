@@ -33,6 +33,10 @@ This application was built for my own needs, but can be easily adapted for your 
     * Clean, modern user interface.
     * Connection status always visible in the header.
     * "Close" button in the app to cleanly shut down the server.
+    * **Keyboard Shortcuts:** Global keyboard shortcuts for quick control:
+        * **Spacebar**: Start a new session, pause a running session, or resume a paused session
+        * **+ (Plus/Equal key)**: Increase walking speed (only when belt is running)
+        * **- (Minus key)**: Decrease walking speed (only when belt is running)
 * **Cross-Platform Server:** Runs on Windows, macOS, or Linux systems that have Python and a Bluetooth adapter.
 
 ## Screenshots
@@ -148,6 +152,11 @@ A `start_app.bat` script is provided to automate VENV activation and running `ru
         * **Pause:** Pauses the session and stops the belt.
         * **Increase:** Raises speed by a small step.
         * **Max:** Sets speed to the maximum configured (~3.7 MPH).
+    * **Keyboard Shortcuts:** You can also control the session using keyboard shortcuts:
+        * **Spacebar:** Start a new session (same as clicking "Start"), pause a running session (same as clicking "Pause"), or resume a paused session (same as clicking "Resume")
+        * **+ (Plus/Equal key):** Increase speed (same as clicking "Increase") - only works when belt is running
+        * **- (Minus key):** Decrease speed (same as clicking "Decrease") - only works when belt is running
+        * These shortcuts work on any page and provide visual feedback when used
     * If you step off the pad or stop it via the remote, the app will detect this and automatically switch to the "Paused Session" screen.
 
 4.  **Paused Session:**

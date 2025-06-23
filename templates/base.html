@@ -152,6 +152,28 @@
         [data-theme="dark"] .btn-custom-primary:hover {
             background-color: #7fc5c8; /* Slightly darker Zenburn cyan */
         }
+
+        /* Keyboard shortcut feedback */
+        .shortcut-feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            z-index: 9999;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .shortcut-feedback.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body data-theme="dark">
@@ -189,6 +211,9 @@
             {% block content %}{% endblock %}
         </div>
     </main>
+
+    <!-- Keyboard shortcut feedback element -->
+    <div id="shortcut-feedback" class="shortcut-feedback"></div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -235,6 +260,16 @@
     // Theme toggle event listener
     document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
 
+    // Function to show keyboard shortcut feedback
+    function showShortcutFeedback(message) {
+        const feedback = document.getElementById('shortcut-feedback');
+        feedback.textContent = message;
+        feedback.classList.add('show');
+        setTimeout(() => {
+            feedback.classList.remove('show');
+        }, 1000);
+    }
+
     // Shutdown button functionality
     document.getElementById('shutdown-button').addEventListener('click', function(e) {
       e.preventDefault();
@@ -251,6 +286,93 @@
           window.close();
         }, 750); // Increased delay slightly
       }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Prevent shortcuts when user is typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.contentEditable === 'true') {
+            return;
+        }
+
+        // Spacebar - Pause/Resume session
+        if (e.code === 'Space') {
+            e.preventDefault(); // Prevent default scroll behavior
+            fetch("{{ url_for('get_stats') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.is_connected) {
+                        showShortcutFeedback('Not connected');
+                        return;
+                    }
+                    
+                    // Check current page to determine action
+                    const currentPath = window.location.pathname;
+                    
+                    if (data.is_running) {
+                        // Belt is running - pause it
+                        showShortcutFeedback('Pausing session...');
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('pause_session') }}";
+                        }, 200);
+                    } else if (data.time_active && data.time_active !== '0:00:00') {
+                        // Session exists but is paused - try to resume
+                        showShortcutFeedback('Resuming session...');
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('resume_session') }}";
+                        }, 200);
+                    } else {
+                        // No active session - start a new one
+                        showShortcutFeedback('Starting session...');
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('start_session') }}";
+                        }, 200);
+                    }
+                })
+                .catch(err => console.log('Error checking stats:', err));
+        }
+        
+        // Plus/Equal key - Increase speed
+        else if (e.code === 'Equal' || e.code === 'NumpadAdd') {
+            e.preventDefault();
+            fetch("{{ url_for('get_stats') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.is_connected) {
+                        showShortcutFeedback('Not connected');
+                    } else if (!data.is_running) {
+                        showShortcutFeedback('Belt not running');
+                    } else {
+                        // Belt is running - increase speed
+                        showShortcutFeedback('Increasing speed...');
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('increase_speed') }}";
+                        }, 200);
+                    }
+                })
+                .catch(err => console.log('Error checking stats:', err));
+        }
+        
+        // Minus key - Decrease speed
+        else if (e.code === 'Minus' || e.code === 'NumpadSubtract') {
+            e.preventDefault();
+            fetch("{{ url_for('get_stats') }}")
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.is_connected) {
+                        showShortcutFeedback('Not connected');
+                    } else if (!data.is_running) {
+                        showShortcutFeedback('Belt not running');
+                    } else {
+                        // Belt is running - decrease speed
+                        showShortcutFeedback('Decreasing speed...');
+                        setTimeout(() => {
+                            window.location.href = "{{ url_for('decrease_speed') }}";
+                        }, 200);
+                    }
+                })
+                .catch(err => console.log('Error checking stats:', err));
+        }
     });
     </script>
 </body>
