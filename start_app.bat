@@ -10,4 +10,4 @@ call "%~dp0.venv\Scripts\activate.bat"
 ECHO Starting WalkingPad Controller...
 
 REM Run the application
-python "%~dp0run.py"
+py -3 "%~dp0run.py"
